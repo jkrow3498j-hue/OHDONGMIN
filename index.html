@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>동민게시판 현황</title>
+
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
+
+  <!-- Leaflet MarkerCluster -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans KR",
+                   "Apple SD Gothic Neo", Arial, sans-serif;
+      color: #1e293b;
+      background: #f8fafc;
+    }
+
+    .app {
+      width: 100vw;
+      height: 100dvh;
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 360px minmax(0, 1fr);
+      overflow: hidden;
+    }
+
+    .sidebar {
+      min-width: 0;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      background: #ffffff;
+      border-right: 1px solid #e2e8f0;
+      box-shadow: 3px 0 14px rgba(15, 23, 42, 0.06);
+      z-index: 10;
+    }
+
+    .header {
+      padding: 20px;
+      display: flex;
+      align-items: center;
+      gap: 13px;
+      border-bottom: 1px solid #f1f5f9;
+      flex: 0 0 auto;
+    }
+
+    .header-icon {
+      width: 48px;
+      height: 48px;
+      display: grid;
+      place-items: center;
+      border-radius: 14px;
+      background: linear-gradient(135deg, #6366f1, #9333ea);
+      color: #fff;
+      font-size: 24px;
+      box-shadow: 0 5px 14px rgba(99, 102, 241, 0.25);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 20px;
+      line-height: 1.25;
+    }
+
+    .sub {
+      margin-top: 5px;
+      color: #64748b;
+      font-size: 13px;
+    }
+
+    .stats {
+      padding: 16px 20px;
+      background: #f8fafc;
+      border-bottom: 1px solid #f1f5f9;
+      flex: 0 0 auto;
+    }
+
+    .stat-card {
+      padding: 15px;
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 14px;
+      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+    }
+
+    .stat-label {
+      color: #94a3b8;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: .04em;
+    }
+
+    .stat-value {
+      margin-top: 4px;
+      color: #4f46e5;
+      font-size: 30px;
+      font-weight: 800;
+    }
+
+    .list-header {
+      padding: 13px 20px;
+      border-bottom: 1px solid #f1f5f9;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex: 0 0 auto;
+    }
+
+    .list-title {
+      font-size: 14px;
+      font-weight: 800;
+    }
+
+    .badge {
+      padding: 4px 8px;
+      border: 1px solid #c7d2fe;
+      border-radius: 8px;
+      color: #4f46e5;
+      background: #eef2ff;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    #locationList {
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow-y: auto;
+      padding: 10px 12px 18px;
+    }
+
+    .list-item {
+      width: 100%;
+      border: 1px solid #e2e8f0;
+      background: #fff;
+      border-radius: 12px;
+      padding: 12px;
+      margin: 0 0 8px;
+      text-align: left;
+      cursor: pointer;
+      transition: .15s ease;
+    }
+
+    .list-item:hover {
+      background: #f5f3ff;
+      border-color: #c7d2fe;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 10px rgba(15, 23, 42, 0.06);
+    }
+
+    .list-id {
+      font-size: 13px;
+      font-weight: 800;
+      color: #1e293b;
+    }
+
+    .list-location {
+      margin-top: 5px;
+      color: #64748b;
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .map-shell {
+      position: relative;
+      min-width: 0;
+      min-height: 0;
+      height: 100%;
+      overflow: hidden;
+      background: #e2e8f0;
+    }
+
+    #map {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      min-height: 300px;
+      z-index: 1;
+    }
+
+    .map-info {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      z-index: 500;
+      max-width: 280px;
+      padding: 12px 14px;
+      border: 1px solid rgba(226, 232, 240, .95);
+      border-radius: 13px;
+      background: rgba(255,255,255,.95);
+      box-shadow: 0 8px 20px rgba(15,23,42,.1);
+      font-size: 12px;
+      line-height: 1.5;
+      color: #64748b;
+    }
+
+    .map-info strong {
+      display: block;
+      margin-bottom: 3px;
+      color: #1e293b;
+      font-size: 13px;
+    }
+
+    .reset-btn {
+      position: absolute;
+      right: 18px;
+      bottom: 26px;
+      z-index: 600;
+      border: none;
+      border-radius: 999px;
+      padding: 12px 16px;
+      background: #4f46e5;
+      color: #fff;
+      font-size: 13px;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 8px 20px rgba(79,70,229,.28);
+    }
+
+    .reset-btn:hover {
+      background: #4338ca;
+    }
+
+    .board-pin {
+      width: 18px;
+      height: 18px;
+      border: 3px solid #fff;
+      border-radius: 50%;
+      background: #4f46e5;
+      box-shadow: 0 2px 8px rgba(15, 23, 42, .35);
+    }
+
+    .board-icon {
+      background: transparent;
+      border: 0;
+    }
+
+    .marker-cluster-small {
+      background: rgba(99, 102, 241, .30);
+    }
+
+    .marker-cluster-small div {
+      background: #4f46e5;
+      color: #fff;
+    }
+
+    .marker-cluster-medium {
+      background: rgba(168, 85, 247, .30);
+    }
+
+    .marker-cluster-medium div {
+      background: #9333ea;
+      color: #fff;
+    }
+
+    .marker-cluster-large {
+      background: rgba(236, 72, 153, .30);
+    }
+
+    .marker-cluster-large div {
+      background: #db2777;
+      color: #fff;
+    }
+
+    .marker-cluster div {
+      font-weight: 800;
+    }
+
+    .leaflet-popup-content-wrapper {
+      border-radius: 12px;
+    }
+
+    .popup-id {
+      display: inline-block;
+      padding: 4px 7px;
+      margin-bottom: 7px;
+      border-radius: 7px;
+      background: #eef2ff;
+      color: #4f46e5;
+      font-size: 11px;
+      font-weight: 800;
+    }
+
+    .popup-location {
+      max-width: 260px;
+      color: #334155;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    @media (max-width: 760px) {
+      body {
+        overflow: hidden;
+      }
+
+      .app {
+        grid-template-columns: 1fr;
+        grid-template-rows: 38dvh 62dvh;
+      }
+
+      .sidebar {
+        border-right: 0;
+        border-bottom: 1px solid #e2e8f0;
+      }
+
+      .header {
+        padding: 12px 14px;
+      }
+
+      .header-icon {
+        width: 40px;
+        height: 40px;
+        font-size: 20px;
+      }
+
+      h1 {
+        font-size: 17px;
+      }
+
+      .stats {
+        padding: 9px 14px;
+      }
+
+      .stat-card {
+        padding: 9px 12px;
+      }
+
+      .stat-value {
+        font-size: 22px;
+      }
+
+      .list-header {
+        padding: 9px 14px;
+      }
+
+      #locationList {
+        padding: 8px 10px 14px;
+      }
+
+      .list-item {
+        padding: 9px 10px;
+      }
+
+      .map-info {
+        display: none;
+      }
+
+      .reset-btn {
+        right: 12px;
+        bottom: 18px;
+        padding: 10px 13px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="header">
+        <div class="header-icon">📍</div>
+        <div>
+          <h1>동민게시판 현황</h1>
+          <div class="sub">부산광역시 동구</div>
+        </div>
+      </div>
+
+      <div class="stats">
+        <div class="stat-card">
+          <div class="stat-label">총 개소</div>
+          <div id="totalCount" class="stat-value">0</div>
+        </div>
+      </div>
+
+      <div class="list-header">
+        <div class="list-title">상세 목록</div>
+        <div class="badge">관리번호 기준</div>
+      </div>
+
+      <div id="locationList"></div>
+    </aside>
+
+    <main class="map-shell">
+      <div class="map-info">
+        <strong>클러스터링 활성</strong>
+        지도를 축소하면 가까운 핀이 숫자로 묶입니다. 숫자를 누르면 자동으로 확대됩니다.
+      </div>
+
+      <button id="resetButton" class="reset-btn" type="button">전체 뷰 보기</button>
+      <div id="map"></div>
+    </main>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+
+  <script>
+    const boardData = [
+      { id: "초1-1", location: "초량상로25번길 26-1", lat: 35.119490, lon: 129.034585 },
+      { id: "초1-2", location: "초량상로25번길 27", lat: 35.119943, lon: 129.039569 },
+      { id: "초1-3", location: "영초윗길 2", lat: 35.117298, lon: 129.034298 },
+      { id: "초1-4", location: "초량상로35번길 28", lat: 35.122738, lon: 129.037302 },
+      { id: "초1-5", location: "영초길 194)", lat: 35.116592, lon: 129.036628 },
+      { id: "초1-6", location: "부산시 동구 초량상로 34", lat: 35.119747, lon: 129.030997 },
+      { id: "초2-1", location: "초량2동 공영주차장위(망양로486번길 3-2) *동일파크 밑 삼거리 아래", lat: 35.118944, lon: 129.029864 },
+      { id: "초2-2", location: "대륙아파트밑 골목도로(망양로490번길 15)", lat: 35.122616, lon: 129.033503 },
+      { id: "초2-3", location: "초량남로17번길 14앞", lat: 35.118933, lon: 129.032223 },
+      { id: "초2-4", location: "국토관리청뒤 담벽", lat: 35.118671, lon: 129.027052 },
+      { id: "초3-1", location: "구봉로 10-1 앞", lat: 35.120530, lon: 129.030588 },
+      { id: "초6-1", location: "황실주차장 맞은편(망양로 596)", lat: 35.126431, lon: 129.030369 },
+      { id: "초6-2", location: "영광주차장 맞은편(망양로 579)", lat: 35.124570, lon: 129.027668 },
+      { id: "초6-3", location: "경희아파트 입구(망양로 537)", lat: 35.126154, lon: 129.027376 },
+      { id: "초6-4", location: "망양로 623 옆", lat: 35.126629, lon: 129.024921 },
+      { id: "초6-5", location: "(구)연화파출소 옆(초량로 98)", lat: 35.122240, lon: 129.027878 },
+      { id: "초6-6", location: "컴퓨터과학고 입구 앞(초량로80번길 5)", lat: 35.122765, lon: 129.030807 },
+      { id: "초6-7", location: "부산고 정문 밑 아름다운빌 앞 (초량로 40번길 9)", lat: 35.127814, lon: 129.031238 },
+      { id: "초6-8", location: "초량6동 공영주차장 옆(초량남로 16)", lat: 35.121516, lon: 129.027415 },
+      { id: "초6-9", location: "초량6동주민센터 옆 골목길안 (초량로 75)", lat: 35.128795, lon: 129.028974 },
+      { id: "초6-10", location: "새길주차장 앞(초량로 80번길 59)", lat: 35.122116, lon: 129.030101 },
+      { id: "초6-11", location: "호암아트빌 아래(망양로610번길 42) *보각사위 한울하이츠 도로변", lat: 35.124508, lon: 129.029802 },
+      { id: "초6-12", location: "호암아트빌2차 앞(망양로610번길 28) *보각사위 한울하이츠 도로변", lat: 35.129329, lon: 129.027341 },
+      { id: "초6-13", location: "산복도로변 농심가할인마트 샛길 (망양로 608)", lat: 35.123531, lon: 129.029199 },
+      { id: "초6-14", location: "부산중학교 담벽(초량북로 31 앞)", lat: 35.120536, lon: 129.029415 },
+      { id: "수1-1", location: "동일중앙초등학교 옆문 입구쪽 담벽 (홍곡로49번길 381)", lat: 35.127921, lon: 129.043512 },
+      { id: "수1-2", location: "수정부자마을 밑(홍곡중로 7) *동구노인복지관 방향 입구 주변", lat: 35.132843, lon: 129.046048 },
+      { id: "수1-3", location: "재건교회 앞(홍곡중로23번길 1) *동구노인복지관 방향 동남아파트 뒷길", lat: 35.130932, lon: 129.043049 },
+      { id: "수1-4", location: "배수지 반사경옆", lat: 35.127027, lon: 129.045053 },
+      { id: "수2-1", location: "수2사무소 위 소라슈퍼위", lat: 35.132512, lon: 129.041639 },
+      { id: "수2-2", location: "장애인복지관 밑", lat: 35.135248, lon: 129.046892 },
+      { id: "수2-3", location: "파워C마트 맞은편 계단 아래 (망양로738번길 2-1 맞은편)", lat: 35.134882, lon: 129.041490 },
+      { id: "수2-4", location: "청광아파트 위 고향재첩국 맞은편", lat: 35.131920, lon: 129.039010 },
+      { id: "수2-5", location: "수정2동공영주차장 담벽", lat: 35.129528, lon: 129.045437 },
+      { id: "수2-6", location: "하이빌 옆 (수성남로13번 주택담벽)", lat: 35.130541, lon: 129.043549 },
+      { id: "수2-7", location: "국제공업사 옆 산복도로", lat: 35.133281, lon: 129.043440 },
+      { id: "수2-8", location: "수정초등학교 공영주차장 입구 옆", lat: 35.136081, lon: 129.045230 },
+      { id: "수2-9", location: "수정성당 맞은편 수정초등학교 담벽", lat: 35.134015, lon: 129.038446 },
+      { id: "수2-10", location: "부산진세무서 뒤", lat: 35.135118, lon: 129.040927 },
+      { id: "수2-11", location: "구 수정우체국 맞은편 담벽", lat: 35.132101, lon: 129.040439 },
+      { id: "수2-12", location: "망양로 739-1 맞은편", lat: 35.133189, lon: 129.042767 },
+      { id: "수4-1", location: "수정외솔로7번길 2 앞 *현정미술과외교습소 앞", lat: 35.133810, lon: 129.036070 },
+      { id: "수4-2", location: "수정외솔로14 맞은편(중복수퍼 앞) *현정미술과외교습소 위", lat: 35.134842, lon: 129.037803 },
+      { id: "수4-3", location: "수림하이츠 바로 앞(수정외솔로 24 옆)", lat: 35.138407, lon: 129.043003 },
+      { id: "수4-4", location: "양지탕 입구 샛길(구봉북길 6 옆)", lat: 35.134591, lon: 129.043681 },
+      { id: "수4-5", location: "수정아파트 3동 앞(망양로685번길 30-2 옆)", lat: 35.134047, lon: 129.039643 },
+      { id: "수4-6", location: "수정아파트 1동 앞(망양로685번길 14 맞은편)", lat: 35.136113, lon: 129.036224 },
+      { id: "수4-7", location: "수정4동 어린이집 아래 (망양로689번길 33 맞은편)", lat: 35.131109, lon: 129.038563 },
+      { id: "수4-8", location: "52번 버스 종점 맞은편(수정공원남로 35 앞)", lat: 35.138002, lon: 129.040713 },
+      { id: "수4-9", location: "수정아파트 13동 앞(수정공원남로 50 맞은편)", lat: 35.136933, lon: 129.043132 },
+      { id: "수4-10", location: "수정아파트 15동 앞(수정공원상로 3 앞)", lat: 35.131705, lon: 129.036832 },
+      { id: "수4-11", location: "수정아파트 8동 위(수정공원상로 19 옆)", lat: 35.132560, lon: 129.038841 },
+      { id: "수4-12", location: "수정아파트 6동 위 (수정공원상로 32-2 맞은편)", lat: 35.135112, lon: 129.040411 },
+      { id: "수4-14", location: "망양로 691-1 맞은편", lat: 35.137839, lon: 129.035760 },
+      { id: "수4-15", location: "수정4동 공영주차장 입구", lat: 35.134591, lon: 129.038317 },
+      { id: "수5-1", location: "수정북로34번길 46 옆", lat: 35.135249, lon: 129.035974 },
+      { id: "수5-2", location: "하늘교회 맞은편 주택담벽(진성로 82)", lat: 35.140417, lon: 129.039600 },
+      { id: "수5-3", location: "수정탕제원 옆(망양로 826-1)", lat: 35.139009, lon: 129.038870 },
+      { id: "수5-4", location: "수5사무소 입구 맞은편(망양로793번길 7)", lat: 35.135324, lon: 129.033620 },
+      { id: "수5-5", location: "필우빌라 위 축대(수성남로 31)", lat: 35.139420, lon: 129.039987 },
+      { id: "수5-6", location: "산만디레스토랑 맞은편(수정공원로 111-1) *동원빌라 도로변", lat: 35.134907, lon: 129.034237 },
+      { id: "수5-8", location: "수정5동공영주차장앞(수정공원북로 5)", lat: 35.139369, lon: 129.037812 },
+      { id: "수5-9", location: "수성초교 뒤 갈림길 입구(수성로 31번길 4)", lat: 35.134591, lon: 129.038317 },
+      { id: "수5-10", location: "동여중 정류소 옆 축대(망양로781번길 5)", lat: 35.139460, lon: 129.036814 },
+      { id: "좌-1", location: "동원아파트 뒤 중복도로(증산로 59 맞은편)", lat: 35.127814, lon: 129.052631 },
+      { id: "좌-2", location: "금성고등학교 정문 맞은편 (증산로 91-1 맞은편)", lat: 35.127419, lon: 129.053745 },
+      { id: "좌-4", location: "두리슈퍼 맞은편(좌천동로 1 맞은편)", lat: 35.125902, lon: 129.053308 },
+      { id: "좌-5", location: "금성아파트 앞(증산동로 37 맞은편)", lat: 35.127976, lon: 129.051515 },
+      { id: "좌-6", location: "수정초등학교 맞은편(진성로 34 골목안)", lat: 35.129994, lon: 129.057393 },
+      { id: "좌-7", location: "OB신호대 굴다리 옆(자성로8번길 30앞)", lat: 35.126510, lon: 129.056086 },
+      { id: "좌-8", location: "OB신호대 굴다리 안쪽(자성로8번길 28-5옆)", lat: 35.129759, lon: 129.051061 },
+      { id: "좌-9", location: "정공단로39번길 15옆", lat: 35.127829, lon: 129.059438 },
+      { id: "좌-10", location: "좌천아파트옆(성북로22번길 29)성북로 27 앞", lat: 35.126581, lon: 129.059528 },
+      { id: "좌-11", location: "좌천동 주민센터 맞은편(좌천남로 19 맞은편)", lat: 35.129486, lon: 129.055938 },
+      { id: "좌-12", location: "세일아파트 입구(증산서로 28)", lat: 35.128795, lon: 129.057796 },
+      { id: "좌-14", location: "고개주차장 입구(망양로 874)", lat: 35.125199, lon: 129.055995 },
+      { id: "좌-15", location: "주랑미술과외교습소 앞(성북로1번길 21)", lat: 35.127885, lon: 129.050478 },
+      { id: "좌-16", location: "하동만물상회 아래(성북로1번길 6)", lat: 35.125740, lon: 129.050015 },
+      { id: "좌-17", location: "하동만물상회 위(성북로 3-2)", lat: 35.126601, lon: 129.053757 },
+      { id: "좌-18", location: "우정빌라 좌측(증산로 33)", lat: 35.126593, lon: 129.052010 },
+      { id: "좌-19", location: "여명빌라 우측(증산로 25)", lat: 35.130386, lon: 129.054326 },
+      { id: "좌-20", location: "우진힐빌라 위쪽(좌천로 19)", lat: 35.130283, lon: 129.058300 },
+      { id: "좌-21", location: "삼미갈비 아래(진성로 66)", lat: 35.125950, lon: 129.053556 },
+      { id: "범1-1", location: "갑자상회 앞(증산북로 13-1)", lat: 35.140889, lon: 129.057865 },
+      { id: "범1-2", location: "화목하이츠빌 앞(증산동로 83)", lat: 35.143615, lon: 129.060155 },
+      { id: "범1-3", location: "범일1동민원센터(범곡로 14)", lat: 35.139612, lon: 129.062024 },
+      { id: "범1-4", location: "대근아트빌라 앞(범곡남로16번길 1)", lat: 35.137839, lon: 129.058284 },
+      { id: "범1-5", location: "정화가스 앞(증산로 125)", lat: 35.138766, lon: 129.060599 },
+      { id: "범1-6", location: "달마정사 앞(증산동로 65-4)", lat: 35.139414, lon: 129.056086 },
+      { id: "범1-7", location: "희야식당 옆(망양로886번길 3)", lat: 35.142345, lon: 129.058253 },
+      { id: "범1-8", location: "동양알미늄 앞(증산서로 36)", lat: 35.136585, lon: 129.058097 },
+      { id: "범1-9", location: "범일초등학교 테니스장 옆(증산서로 48-1)", lat: 35.143521, lon: 129.061763 },
+      { id: "범1-10", location: "성일교회 밑(증산서로62번길 3)", lat: 35.140061, lon: 129.062402 },
+      { id: "범1-11", location: "동신탕 옆(증산로 162)", lat: 35.138853, lon: 129.061955 },
+      { id: "범1-12", location: "삼광주택 옆(증산로 167-1)", lat: 35.141703, lon: 129.061928 },
+      { id: "범1-13", location: "가랑커피숖 옆(범곡북로 11)", lat: 35.139369, lon: 129.057812 },
+      { id: "범1-14", location: "대양슈퍼옆 골목(범곡북로 21)", lat: 35.143714, lon: 129.061730 },
+      { id: "범1-15", location: "동부전공회 맞은편(범상로 24 앞)", lat: 35.143219, lon: 129.057639 },
+      { id: "범1-16", location: "호천경로당 앞(범곡로 43)", lat: 35.140130, lon: 129.060417 },
+      { id: "범1-17", location: "범일4동어린이집옆(범곡북로 26)", lat: 35.141604, lon: 129.064562 },
+      { id: "범1-18", location: "하루방 옆 온천교회(범내남로 3-2)", lat: 35.140683, lon: 129.061327 },
+      { id: "범1-19", location: "좌천슈퍼 앞(범내남로 16-1)", lat: 35.144416, lon: 129.058721 },
+      { id: "범1-20", location: "성화미용실 옆(범내남로 42-3)", lat: 35.142071, lon: 129.060010 },
+      { id: "범1-21", location: "동구종합사회복지관앞(안창로 57)", lat: 35.139634, lon: 129.060288 },
+      { id: "범1-22", location: "삼거리가든 옆(안창로77번길 4)", lat: 35.138243, lon: 129.059298 },
+      { id: "범1-23", location: "안창세탁소앞(안창로 92-1)", lat: 35.137699, lon: 129.061845 },
+      { id: "범1-24", location: "교통부로타리옆(망양로 972)", lat: 35.141528, lon: 129.060309 },
+      { id: "범1-25", location: "범일1동주민센터 옆(범상로 12)", lat: 35.136270, lon: 129.062013 },
+      { id: "범2-1", location: "성남초등학교옆(범일로53번길 14)", lat: 35.144865, lon: 129.055938 },
+      { id: "범2-2", location: "현대백화점 뒤편(범일일길 43-1)", lat: 35.140306, lon: 129.055030 },
+      { id: "범2-3", location: "자성대아파트 D동 옆(자성로108번길 14)", lat: 35.143521, lon: 129.056024 },
+      { id: "범2-4", location: "송이한복 옆(범일로611-42)", lat: 35.146206, lon: 129.055171 },
+      { id: "범5-1", location: "동아제분 담벽 (화성자원 입구)", lat: 35.147255, lon: 129.055419 },
+      { id: "범5-2", location: "수남경로당맞은편(충장대로289번길 17)", lat: 35.146608, lon: 129.053375 }
+    ];
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    const map = L.map("map", {
+      zoomControl: false,
+      preferCanvas: true
+    });
+
+    L.control.zoom({ position: "bottomright" }).addTo(map);
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+    }).addTo(map);
+
+    const clusterGroup = L.markerClusterGroup({
+      maxClusterRadius: 45,
+      zoomToBoundsOnClick: true,
+      spiderfyOnMaxZoom: true,
+      showCoverageOnHover: false,
+      disableClusteringAtZoom: 18,
+      chunkedLoading: true
+    });
+
+    const icon = L.divIcon({
+      className: "board-icon",
+      html: '<div class="board-pin"></div>',
+      iconSize: [18, 18],
+      iconAnchor: [9, 9],
+      popupAnchor: [0, -10]
+    });
+
+    const list = document.getElementById("locationList");
+    const totalCount = document.getElementById("totalCount");
+    totalCount.textContent = boardData.length;
+
+    const markerPairs = [];
+    const latLngs = [];
+
+    boardData.forEach((board) => {
+      const latLng = L.latLng(board.lat, board.lon);
+      latLngs.push(latLng);
+
+      const marker = L.marker(latLng, {
+        icon,
+        title: `${board.id} - ${board.location}`
+      });
+
+      marker.bindPopup(`
+        <div class="popup-id">${escapeHtml(board.id)}</div>
+        <div class="popup-location">${escapeHtml(board.location)}</div>
+      `);
+
+      clusterGroup.addLayer(marker);
+      markerPairs.push({ board, marker });
+
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "list-item";
+      button.innerHTML = `
+        <div class="list-id">${escapeHtml(board.id)}</div>
+        <div class="list-location">${escapeHtml(board.location)}</div>
+      `;
+
+      button.addEventListener("click", () => {
+        clusterGroup.zoomToShowLayer(marker, () => {
+          map.panTo(marker.getLatLng(), { animate: true });
+          marker.openPopup();
+        });
+      });
+
+      list.appendChild(button);
+    });
+
+    map.addLayer(clusterGroup);
+
+    const allBounds = L.latLngBounds(latLngs);
+
+    function fitAll(animate = false) {
+      map.invalidateSize(true);
+      map.fitBounds(allBounds, {
+        padding: [28, 28],
+        animate
+      });
+      map.closePopup();
+    }
+
+    document.getElementById("resetButton").addEventListener("click", () => fitAll(true));
+
+    // GitHub Pages/CDN 환경에서 컨테이너 크기가 확정된 다음 다시 계산.
+    requestAnimationFrame(() => {
+      map.invalidateSize(true);
+      fitAll(false);
+    });
+
+    setTimeout(() => {
+      map.invalidateSize(true);
+      fitAll(false);
+    }, 500);
+
+    // 사이드바/화면 크기 변화에도 타일 재계산.
+    const resizeObserver = new ResizeObserver(() => {
+      map.invalidateSize(false);
+    });
+    resizeObserver.observe(document.querySelector(".map-shell"));
+
+    window.addEventListener("orientationchange", () => {
+      setTimeout(() => map.invalidateSize(true), 250);
+    });
+  </script>
+</body>
+</html>
